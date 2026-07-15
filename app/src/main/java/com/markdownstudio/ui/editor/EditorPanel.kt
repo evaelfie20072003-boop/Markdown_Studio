@@ -64,11 +64,9 @@ fun EditorPanel(
             onValueChange = { newValue ->
                 onContentChanged(newValue.text)
                 onCursorChanged(
-                    position = newValue.selection.start,
-                    selectionStart = if (newValue.selection.collapsed) null
-                        else newValue.selection.min,
-                    selectionEnd = if (newValue.selection.collapsed) null
-                        else newValue.selection.max
+                    newValue.selection.start,
+                    if (newValue.selection.collapsed) null else newValue.selection.min,
+                    if (newValue.selection.collapsed) null else newValue.selection.max
                 )
             },
             visualTransformation = syntaxHighlighter,

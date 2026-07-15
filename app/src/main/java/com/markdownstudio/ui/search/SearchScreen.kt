@@ -25,15 +25,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FindReplace
-import androidx.compose.material.icons.filled.Regex
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.FindReplace
-import androidx.compose.material.icons.outlined.Regex
 import androidx.compose.material.icons.outlined.TextFields
+import kotlin.text.Regex
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
@@ -158,7 +158,7 @@ private fun SearchBar(
                 Row {
                     IconButton(onClick = onToggleCaseSensitive) {
                         Icon(
-                            if (caseSensitive) Icons.Filled.TextFields else Icons.Outlined.TextFields,
+                            Icons.Default.TextFields,
                             contentDescription = if (caseSensitive) "Case sensitive on" else "Case sensitive off",
                             tint = if (caseSensitive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
@@ -166,7 +166,7 @@ private fun SearchBar(
                     }
                     IconButton(onClick = onToggleRegex) {
                         Icon(
-                            if (useRegex) Icons.Filled.Regex else Icons.Outlined.Regex,
+                            Icons.Default.FindReplace,
                             contentDescription = if (useRegex) "Regex on" else "Regex off",
                             tint = if (useRegex) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
@@ -174,7 +174,7 @@ private fun SearchBar(
                     }
                     IconButton(onClick = onToggleReplace) {
                         Icon(
-                            if (showReplace) Icons.Filled.FindReplace else Icons.Outlined.FindReplace,
+                            Icons.Default.FindReplace,
                             contentDescription = if (showReplace) "Replace mode on" else "Replace mode off",
                             tint = if (showReplace) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
@@ -182,7 +182,7 @@ private fun SearchBar(
                     }
                     if (query.isNotEmpty()) {
                         IconButton(onClick = onClear) {
-                            Icon(Icons.Filled.Clear, contentDescription = "Clear search",
+                            Icon(Icons.Default.Clear, contentDescription = "Clear search",
                                 modifier = Modifier.size(20.dp))
                         }
                     }
@@ -284,7 +284,7 @@ private fun SearchResultItem(
             if (onReplace != null) {
                 IconButton(onClick = onReplace, modifier = Modifier.size(28.dp)) {
                     Icon(
-                        Icons.Filled.AutoFixHigh, contentDescription = "Replace in this file",
+                        Icons.Default.AutoFixHigh, contentDescription = "Replace in this file",
                         modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary
                     )
                 }
