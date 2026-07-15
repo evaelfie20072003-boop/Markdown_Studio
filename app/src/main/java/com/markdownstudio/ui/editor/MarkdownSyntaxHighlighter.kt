@@ -43,7 +43,7 @@ class MarkdownSyntaxHighlighter(
 
             if (trimmed.startsWith("```")) {
                 inCodeBlock = !inCodeBlock
-                builder.setSpanStyle(SpanStyle(color = codeColor), lineStart = globalStart, lineStart + minOf(3, line.length))
+                builder.setSpanStyle(SpanStyle(color = codeColor), start = globalStart, end = globalStart + minOf(3, line.length))
             } else if (inCodeBlock) {
                 builder.setSpanStyle(SpanStyle(color = codeColor, background = codeBlockBackground), globalStart, lineEnd)
             } else {

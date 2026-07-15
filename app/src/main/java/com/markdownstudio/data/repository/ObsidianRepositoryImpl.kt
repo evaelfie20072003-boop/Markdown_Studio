@@ -22,6 +22,8 @@ import com.markdownstudio.domain.model.obsidian.Template
 import com.markdownstudio.domain.model.obsidian.WikiLink
 import com.markdownstudio.domain.repository.ObsidianRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -67,7 +69,7 @@ class ObsidianRepositoryImpl @Inject constructor(
     }
 
     override fun getOutgoingLinks(uri: String): List<WikiLink> {
-        return wikiLinkDao.getOutgoingLinks(uri).map { entity ->
+        return runBlocking(Dispatchers.IO) { wikiLinkDao.getOutgoingLinks(uri) }.map { entity ->
             WikiLink(
                 target = entity.target,
                 displayText = entity.displayText,
@@ -78,7 +80,7 @@ class ObsidianRepositoryImpl @Inject constructor(
 
     override fun getBacklinks(uri: String): List<Backlink> {
         val name = uri.substringAfterLast("/").removeSuffix(".md").lowercase()
-        val entities = wikiLinkDao.getBacklinks(name)
+        val entities = runBlocking(Dispatchers.IO) { wikiLinkDao.getBacklinks(name) }
         return entities.map { entity ->
             Backlink(
                 sourceUri = entity.sourceUri,
@@ -91,13 +93,13 @@ class ObsidianRepositoryImpl @Inject constructor(
     }
 
     override fun getTags(uri: String): List<Tag> {
-        return tagDao.getTagsForFile(uri).map { entity ->
+        return runBlocking(Dispatchers.IO) { tagDao.getTagsForFile(uri) }.map { entity ->
             Tag(name = entity.name, sourceUri = entity.sourceUri)
         }
     }
 
     override fun getAllTags(): List<Tag> {
-        return tagDao.getAllTags().map { entity ->
+        return runBlocking(Dispatchers.IO) { tagDao.getAllTags() }.map { entity ->
             Tag(name = entity.name, sourceUri = entity.sourceUri)
         }
     }
@@ -111,12 +113,12 @@ class ObsidianRepositoryImpl @Inject constructor(
     }
 
     override fun getLinkGraph(): LinkGraph {
-        val allLinks = wikiLinkDao.getAllTargets()
+        val allLinks = runBlocking(Dispatchers.IO) { wikiLinkDao.getAllTargets() }
         val nodes = mutableMapOf<String, LinkNode>()
         val edges = mutableListOf<LinkEdge>()
 
         for (target in allLinks) {
-            val sources = wikiLinkDao.getBacklinkSources(target)
+            val sources = runBlocking(Dispatchers.IO) { wikiLinkDao.getBacklinkSources(target) }
             edges.addAll(sources.map { source ->
                 LinkEdge(source = source, target = target)
             })
@@ -218,9 +220,9 @@ class ObsidianRepositoryImpl @Inject constructor(
             })
         } catch (_: Exception) {}
 
-        val savedTemplates = runCatching {
-            templateDao.getAllTemplates()
-        }.getOrDefault(emptyList())
+        val savedTemplates = runBlocking(Dispatchers.IO) {
+            runCatching { templateDao.getAllTemplates() }.getOrDefault(emptyList())
+        }
         templates.addAll(savedTemplates.filter { t ->
             templates.none { it.uri == t.uri }
         }.map { entity ->
@@ -289,7 +291,7 @@ class ObsidianRepositoryImpl @Inject constructor(
     }
 
     override fun searchByTag(tag: String): List<String> {
-        return tagDao.getFilesByTag(tag.trim().lowercase())
+        return runBlocking(Dispatchers.IO) { tagDao.getFilesByTag(tag.trim().lowercase()) }
     }
 
     override fun resolveWikiLink(target: String): String? {

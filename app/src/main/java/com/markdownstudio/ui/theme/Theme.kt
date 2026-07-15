@@ -47,6 +47,7 @@ private val AmoledColorScheme = darkColorScheme(
     onSurfaceVariant = Color(0xFF9E9E9E)
 )
 
+@Composable
 private fun resolveColorScheme(themeMode: ThemeMode, darkTheme: Boolean, dynamicColor: Boolean): ColorScheme {
     return when {
         themeMode == ThemeMode.AMOLED -> AmoledColorScheme

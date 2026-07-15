@@ -10,6 +10,8 @@ import com.markdownstudio.data.local.entity.RecentFileEntity
 import com.markdownstudio.domain.model.MarkdownFile
 import com.markdownstudio.domain.repository.FileRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -48,7 +50,9 @@ class FileRepositoryImpl @Inject constructor(
                 ?.map { it.toMarkdownFile(directoryUri) }
                 ?: emptyList()
 
-            val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
+            val favoriteUris = runBlocking(Dispatchers.IO) {
+                favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
+            }
             Result.success(children.map { it.copy(isFavorite = it.uri in favoriteUris) })
         } catch (e: Exception) {
             Result.failure(e)
@@ -178,7 +182,9 @@ class FileRepositoryImpl @Inject constructor(
             val results = mutableListOf<MarkdownFile>()
             searchRecursive(Uri.parse(rootUri), query.lowercase(), results)
 
-            val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
+            val favoriteUris = runBlocking(Dispatchers.IO) {
+                favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
+            }
             Result.success(results.map { it.copy(isFavorite = it.uri in favoriteUris) })
         } catch (e: Exception) {
             Result.failure(e)
@@ -208,8 +214,9 @@ class FileRepositoryImpl @Inject constructor(
 
     override fun getRecentFiles(): Result<List<MarkdownFile>> {
         return try {
-            val entities = recentFileDao.getRecentFiles()
+            val entities = runBlocking(Dispatchers.IO) { recentFileDao.getRecentFiles() }
             Result.success(entities.map { entity ->
+                val isFav = runBlocking(Dispatchers.IO) { favoriteFileDao.isFavorite(entity.uri) }
                 MarkdownFile(
                     uri = entity.uri,
                     name = entity.name,
@@ -217,7 +224,7 @@ class FileRepositoryImpl @Inject constructor(
                     lastModified = entity.lastOpenedAt,
                     isDirectory = false,
                     parentUri = entity.parentUri,
-                    isFavorite = favoriteFileDao.isFavorite(entity.uri)
+                    isFavorite = isFav
                 )
             })
         } catch (e: Exception) {
@@ -237,7 +244,7 @@ class FileRepositoryImpl @Inject constructor(
 
     override fun getFavoriteFiles(): Result<List<MarkdownFile>> {
         return try {
-            val entities = favoriteFileDao.getFavoriteFiles()
+            val entities = runBlocking(Dispatchers.IO) { favoriteFileDao.getFavoriteFiles() }
             Result.success(entities.map { entity ->
                 MarkdownFile(
                     uri = entity.uri,
@@ -269,11 +276,12 @@ class FileRepositoryImpl @Inject constructor(
     }
 
     override fun isFavorite(uri: String): Boolean {
-        return favoriteFileDao.isFavorite(uri)
+        return runBlocking(Dispatchers.IO) { favoriteFileDao.isFavorite(uri) }
     }
 
     private fun DocumentFile.toMarkdownFile(parentUri: String): MarkdownFile {
         val uriStr = this.uri.toString()
+        val isFav = runBlocking(Dispatchers.IO) { favoriteFileDao.isFavorite(uriStr) }
         return MarkdownFile(
             uri = uriStr,
             name = this.name ?: "Unknown",
@@ -281,7 +289,7 @@ class FileRepositoryImpl @Inject constructor(
             lastModified = this.lastModified(),
             isDirectory = this.isDirectory,
             parentUri = parentUri,
-            isFavorite = favoriteFileDao.isFavorite(uriStr)
+            isFavorite = isFav
         )
     }
 
