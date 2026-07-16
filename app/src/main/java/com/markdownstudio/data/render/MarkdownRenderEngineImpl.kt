@@ -10,7 +10,7 @@ class MarkdownRenderEngineImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : MarkdownRenderEngine {
 
-    private val htmlTemplate: String by lazy {
+    val htmlTemplate: String by lazy {
         HtmlTemplateBuilder.build(context)
     }
 
@@ -29,8 +29,6 @@ class MarkdownRenderEngineImpl @Inject constructor(
     override suspend fun renderToHtmlAsync(markdown: String): String {
         return renderToHtml(markdown)
     }
-
-    fun getHtmlTemplate(): String = htmlTemplate
 
     fun buildRenderScript(markdown: String): String {
         val escaped = markdown
