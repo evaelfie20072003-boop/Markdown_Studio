@@ -44,7 +44,7 @@ fun MarkdownPreview(
     val currentOnScrollChanged by rememberUpdatedState(onScrollChanged)
     val currentOnScrollSyncComplete by rememberUpdatedState(onScrollSyncComplete)
 
-    val htmlTemplate = remember { engine.getHtmlTemplate() }
+    val htmlTemplate = remember { engine.htmlTemplate }
     val scrollHandler = remember { Handler(Looper.getMainLooper()) }
     var lastReportedRatio by remember { mutableStateOf(-1f) }
     var suppressJsScroll by remember { mutableStateOf(false) }
