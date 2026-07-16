@@ -55,14 +55,6 @@ fun MarkdownPreview(
         if (view != null && templateLoaded) {
             val script = "render('${escapeJs(markdown)}')"
             view.evaluateJavascript(script, null)
-        } else if (view != null) {
-            view.loadDataWithBaseURL(
-                "https://markdown-studio.app/",
-                htmlTemplate,
-                "text/html",
-                "UTF-8",
-                null
-            )
         }
     }
 
@@ -94,7 +86,8 @@ fun MarkdownPreview(
                     settings.useWideViewPort = true
                     settings.builtInZoomControls = false
                     settings.displayZoomControls = false
-                    settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                    settings.cacheMode = android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
+                    settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
 

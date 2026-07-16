@@ -33,7 +33,7 @@ data class EditorUiState(
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
     val wordWrap: Boolean = true,
-    val viewMode: ViewMode = ViewMode.EDITOR,
+    val viewMode: ViewMode = ViewMode.PREVIEW,
     val showFindReplace: Boolean = false,
     val showBacklinks: Boolean = false,
     val findQuery: String = "",

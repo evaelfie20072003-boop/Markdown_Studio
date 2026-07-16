@@ -13,63 +13,32 @@ object HtmlTemplateBuilder {
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 <style>
     :root {
-        --bg: #ffffff;
-        --text: #1a1a2e;
-        --heading: #16213e;
-        --link: #0f3460;
-        --code-bg: #f4f4f8;
-        --code-text: #e94560;
-        --blockquote-border: #0f3460;
-        --blockquote-bg: #f0f4ff;
-        --table-border: #ddd;
-        --table-header-bg: #f0f4ff;
-        --table-row-alt: #f8f9ff;
-        --hr: #eee;
-        --inline-code-bg: #f0f0f5;
-        --callout-info-bg: #e8f4fd;
+        --bg: #1a1a2e;
+        --text: #e0e0e0;
+        --heading: #ffffff;
+        --link: #64b5f6;
+        --code-bg: #2d2d44;
+        --code-text: #ff8a80;
+        --blockquote-border: #64b5f6;
+        --blockquote-bg: #1e2740;
+        --table-border: #333;
+        --table-header-bg: #252542;
+        --table-row-alt: #1f1f3a;
+        --hr: #333;
+        --inline-code-bg: #2d2d44;
+        --callout-info-bg: #1a2a3a;
         --callout-info-border: #2196f3;
-        --callout-warning-bg: #fff8e1;
+        --callout-warning-bg: #2a2518;
         --callout-warning-border: #ff9800;
-        --callout-danger-bg: #ffebee;
+        --callout-danger-bg: #2a1818;
         --callout-danger-border: #f44336;
-        --callout-success-bg: #e8f5e9;
+        --callout-success-bg: #182a18;
         --callout-success-border: #4caf50;
-        --callout-tip-bg: #f3e5f5;
+        --callout-tip-bg: #25182a;
         --callout-tip-border: #9c27b0;
-        --task-checked: #4caf50;
-        --footnote-text: #666;
-        --mermaid-bg: #f8f9fa;
-    }
-
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --bg: #1a1a2e;
-            --text: #e0e0e0;
-            --heading: #ffffff;
-            --link: #64b5f6;
-            --code-bg: #2d2d44;
-            --code-text: #ff8a80;
-            --blockquote-border: #64b5f6;
-            --blockquote-bg: #1e2740;
-            --table-border: #333;
-            --table-header-bg: #252542;
-            --table-row-alt: #1f1f3a;
-            --hr: #333;
-            --inline-code-bg: #2d2d44;
-            --callout-info-bg: #1a2a3a;
-            --callout-info-border: #2196f3;
-            --callout-warning-bg: #2a2518;
-            --callout-warning-border: #ff9800;
-            --callout-danger-bg: #2a1818;
-            --callout-danger-border: #f44336;
-            --callout-success-bg: #182a18;
-            --callout-success-border: #4caf50;
-            --callout-tip-bg: #25182a;
-            --callout-tip-border: #9c27b0;
-            --task-checked: #66bb6a;
-            --footnote-text: #999;
-            --mermaid-bg: #1e1e32;
-        }
+        --task-checked: #66bb6a;
+        --footnote-text: #999;
+        --mermaid-bg: #1e1e32;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -289,7 +258,7 @@ object HtmlTemplateBuilder {
 <script>
     mermaid.initialize({
         startOnLoad: false,
-        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+        theme: 'dark',
         securityLevel: 'loose'
     });
 
@@ -368,12 +337,10 @@ object HtmlTemplateBuilder {
     // Task list processing - Notion style checkboxes
     function processTaskLists(html) {
         return html
-            .replace(/<li>\\s*<input type="checkbox" disabled[^>]*>\\s*/g, '<li class="task-list-item"><span class="task-checkbox"></span> ')
-            .replace(/<li>\\s*<input type="checkbox" disabled checked[^>]*>\\s*/g, '<li class="task-list-item"><span class="task-checkbox checked"></span> ')
-            .replace(/<li>/g, function(match) {
-                if (match.indexOf('task-list-item') === -1) return match;
-                return match;
-            });
+            .replace(/<li>\\[ \\]\\s*/g, '<li class="task-list-item"><span class="task-checkbox"></span> ')
+            .replace(/<li>\\[x\\]\\s*/gi, '<li class="task-list-item"><span class="task-checkbox checked"></span> ')
+            .replace(/<li>\\[ \\]/g, '<li class="task-list-item" style="list-style:none"><span class="task-checkbox"></span> ')
+            .replace(/<li>\\[x\\]/gi, '<li class="task-list-item" style="list-style:none"><span class="task-checkbox checked"></span> ');
     }
 
     // Mermaid processing
