@@ -9,3 +9,8 @@
 .cxx
 local.properties
 /app/build
+
+# Build artifacts
+build_log_artifact*.zip
+build.log
+
