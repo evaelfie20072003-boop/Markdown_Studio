@@ -76,99 +76,141 @@ object HtmlTemplateBuilder {
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
         font-size: 16px;
-        line-height: 1.7;
+        line-height: 1.6;
         color: var(--text);
         background: var(--bg);
-        padding: 16px;
+        padding: 24px 28px;
         overflow-x: hidden;
         word-wrap: break-word;
+        -webkit-font-smoothing: antialiased;
     }
 
-    h1 { font-size: 2em; margin: 0.67em 0; color: var(--heading); border-bottom: 2px solid var(--hr); padding-bottom: 8px; }
-    h2 { font-size: 1.5em; margin: 0.83em 0; color: var(--heading); border-bottom: 1px solid var(--hr); padding-bottom: 6px; }
-    h3 { font-size: 1.25em; margin: 1em 0; color: var(--heading); }
-    h4 { font-size: 1em; margin: 1.33em 0; color: var(--heading); }
-    h5 { font-size: 0.875em; margin: 1.67em 0; color: var(--heading); }
-    h6 { font-size: 0.85em; margin: 2.33em 0; color: var(--heading); opacity: 0.8; }
+    h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; color: var(--heading); }
+    h1 { font-size: 1.9em; margin: 0.5em 0 0.3em 0; line-height: 1.3; }
+    h2 { font-size: 1.5em; margin: 0.6em 0 0.3em 0; line-height: 1.35; }
+    h3 { font-size: 1.25em; margin: 0.7em 0 0.3em 0; line-height: 1.4; }
+    h4 { font-size: 1.05em; margin: 0.8em 0 0.2em 0; color: var(--heading); font-weight: 600; }
+    h5 { font-size: 0.9em; margin: 0.9em 0 0.2em 0; color: var(--heading); font-weight: 600; opacity: 0.75; }
+    h6 { font-size: 0.85em; margin: 1em 0 0.2em 0; color: var(--heading); font-weight: 600; opacity: 0.65; }
 
-    p { margin: 0 0 16px 0; }
-    a { color: var(--link); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    p { margin: 0 0 12px 0; }
+    p:last-child { margin-bottom: 0; }
 
-    ul, ol { margin: 0 0 16px 0; padding-left: 24px; }
-    li { margin: 4px 0; }
+    a { color: #3b82f6; text-decoration: none; font-weight: 500; }
+    a:hover { text-decoration: underline; opacity: 0.85; }
+
+    ul, ol { margin: 0 0 12px 0; padding-left: 26px; }
+    li { margin: 3px 0; line-height: 1.6; }
     li > ul, li > ol { margin-bottom: 0; }
 
     blockquote {
-        margin: 0 0 16px 0;
-        padding: 8px 16px;
+        margin: 0 0 12px 0;
+        padding: 10px 20px;
         border-left: 4px solid var(--blockquote-border);
         background: var(--blockquote-bg);
         color: var(--text);
+        border-radius: 0 6px 6px 0;
     }
     blockquote p:last-child { margin-bottom: 0; }
 
     code {
         font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-        font-size: 0.875em;
-        padding: 2px 6px;
+        font-size: 0.85em;
+        padding: 3px 6px;
         border-radius: 4px;
         background: var(--inline-code-bg);
         color: var(--code-text);
     }
 
     pre {
-        margin: 0 0 16px 0;
-        padding: 16px;
-        border-radius: 6px;
+        margin: 0 0 12px 0;
+        padding: 16px 20px;
+        border-radius: 8px;
         background: var(--code-bg);
         overflow-x: auto;
+        border: 1px solid rgba(128,128,128,0.1);
     }
     pre code {
         padding: 0;
         background: transparent;
         color: var(--text);
         font-size: 0.85em;
-        line-height: 1.5;
+        line-height: 1.6;
     }
 
     hr {
         border: none;
-        border-top: 2px solid var(--hr);
-        margin: 24px 0;
+        height: 1px;
+        background: var(--hr);
+        margin: 20px 0;
     }
 
     table {
         width: 100%;
         border-collapse: collapse;
-        margin: 0 0 16px 0;
+        margin: 0 0 12px 0;
         overflow-x: auto;
         display: block;
+        font-size: 0.95em;
     }
     th, td {
         border: 1px solid var(--table-border);
-        padding: 8px 12px;
+        padding: 8px 14px;
         text-align: left;
     }
     th {
         background: var(--table-header-bg);
         font-weight: 600;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
     tr:nth-child(even) td { background: var(--table-row-alt); }
 
     img {
         max-width: 100%;
         height: auto;
-        border-radius: 6px;
+        border-radius: 8px;
         margin: 8px 0;
     }
 
-    /* Task Lists */
-    .task-list-item { list-style: none; margin-left: -24px; }
-    .task-list-item input[type="checkbox"] {
-        margin-right: 8px;
-        accent-color: var(--task-checked);
-        transform: scale(1.1);
+    /* Task Lists - Notion style */
+    ul li.task-list-item {
+        list-style: none;
+        margin-left: -26px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    ul li.task-list-item::before { display: none; }
+    .task-checkbox {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        margin-top: 3px;
+        border: 2px solid var(--text);
+        border-radius: 3px;
+        background: transparent;
+        opacity: 0.8;
+    }
+    .task-checkbox.checked {
+        background: var(--task-checked);
+        border-color: var(--task-checked);
+        position: relative;
+    }
+    .task-checkbox.checked::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        width: 6px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
     }
 
     /* Footnotes */
@@ -311,9 +353,6 @@ object HtmlTemplateBuilder {
     };
 
     // Override link renderer for handling
-    const defaultLinkRender = md.renderer.rules.link_open || function(tokens, idx, options, env, self) {
-        return self.renderToken(tokens, idx, options);
-    };
     md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
         const token = tokens[idx];
         const href = token.attrGet('href') || '';
@@ -321,16 +360,20 @@ object HtmlTemplateBuilder {
         if (isExternal) {
             token.attrSet('target', '_blank');
             token.attrSet('rel', 'noopener noreferrer');
-            token.attrSet('onclick', 'event.preventDefault(); window.Android.openLink(\\'' + href + '\\')');
+            token.attrSet('onclick', "event.preventDefault(); window.Android.openLink('" + href.replace(/'/g, "\\'") + "')");
         }
-        return defaultLinkRender(tokens, idx, options, env, self);
+        return self.renderToken(tokens, idx, options);
     };
 
-    // Task list processing
+    // Task list processing - Notion style checkboxes
     function processTaskLists(html) {
-        return html.replace(/<li>/g, '<li class="task-list-item">')
-            .replace(/<input type="checkbox"/g, '<input type="checkbox" disabled')
-            .replace(/<li class="task-list-item">\\s*<input type="checkbox" disabled checked/g, '<li class="task-list-item"><input type="checkbox" disabled checked');
+        return html
+            .replace(/<li>\\s*<input type="checkbox" disabled[^>]*>\\s*/g, '<li class="task-list-item"><span class="task-checkbox"></span> ')
+            .replace(/<li>\\s*<input type="checkbox" disabled checked[^>]*>\\s*/g, '<li class="task-list-item"><span class="task-checkbox checked"></span> ')
+            .replace(/<li>/g, function(match) {
+                if (match.indexOf('task-list-item') === -1) return match;
+                return match;
+            });
     }
 
     // Mermaid processing

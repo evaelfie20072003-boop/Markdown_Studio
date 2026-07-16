@@ -83,13 +83,6 @@ fun MarkdownPreview(
     }
 
     Box(modifier = modifier) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
         AndroidView(
             factory = { context ->
                 WebView(context).apply {
@@ -102,6 +95,8 @@ fun MarkdownPreview(
                     settings.builtInZoomControls = false
                     settings.displayZoomControls = false
                     settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
 
                     addJavascriptInterface(
                         AndroidScrollBridge(
@@ -143,6 +138,13 @@ fun MarkdownPreview(
             },
             modifier = Modifier.fillMaxSize()
         )
+
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 
