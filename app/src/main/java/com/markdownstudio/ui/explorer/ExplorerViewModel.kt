@@ -78,12 +78,17 @@ class ExplorerViewModel @Inject constructor(
         }
     }
 
-    fun createFile(name: String) {
+    fun createFile(name: String, content: String = "") {
         val dirUri = _uiState.value.currentDirectoryUri ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, showCreateDialog = false)
             fileOperationsUseCase.create(dirUri, name)
-                .onSuccess { navigateToDirectory(dirUri) }
+                .onSuccess { file ->
+                    if (content.isNotBlank()) {
+                        fileOperationsUseCase.write(file, content)
+                    }
+                    navigateToDirectory(dirUri)
+                }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
