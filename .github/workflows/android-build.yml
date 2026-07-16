@@ -35,7 +35,8 @@ jobs:
       - name: Show build errors
         if: failure()
         run: |
-          echo "::error title=Build Error::$(tail -100 build.log | head -c 6000)"
+          BUILD_OUTPUT=$(tail -200 build.log | head -c 8000 | tr '\n' '%0A' | tr -d '\r')
+          echo "::error title=Build Error::$BUILD_OUTPUT"
 
       - name: Upload build log
         uses: actions/upload-artifact@v5
