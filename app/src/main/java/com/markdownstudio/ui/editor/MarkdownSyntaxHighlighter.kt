@@ -30,7 +30,7 @@ class MarkdownSyntaxHighlighter(
     override fun filter(text: AnnotatedString): TransformedText {
         val content = text.text
         val builder = AnnotatedString.Builder(content)
-        builder.setSpanStyle(SpanStyle(color = plainTextColor), 0, content.length)
+        builder.addStyle(SpanStyle(color = plainTextColor), 0, content.length)
 
         val lines = content.split('\n')
         var globalStart = 0
@@ -43,15 +43,15 @@ class MarkdownSyntaxHighlighter(
 
             if (trimmed.startsWith("```")) {
                 inCodeBlock = !inCodeBlock
-                builder.setSpanStyle(SpanStyle(color = codeColor), start = globalStart, end = globalStart + minOf(3, line.length))
+                builder.addStyle(SpanStyle(color = codeColor), start = globalStart, end = globalStart + minOf(3, line.length))
             } else if (inCodeBlock) {
-                builder.setSpanStyle(SpanStyle(color = codeColor, background = codeBlockBackground), globalStart, lineEnd)
+                builder.addStyle(SpanStyle(color = codeColor, background = codeBlockBackground), globalStart, lineEnd)
             } else {
                 applyBlockStyles(builder, trimmed, indent, globalStart, lineEnd)
                 codeSpanRegex.findAll(line).forEach { match ->
                     val start = globalStart + match.range.first
                     val end = globalStart + match.range.last + 1
-                    builder.setSpanStyle(SpanStyle(color = codeColor, background = codeBlockBackground), start, end)
+                    builder.addStyle(SpanStyle(color = codeColor, background = codeBlockBackground), start, end)
                 }
                 boldRegex.findAll(line).forEach { match ->
                     val g = match.groupValues
@@ -60,7 +60,7 @@ class MarkdownSyntaxHighlighter(
                 italicRegex.findAll(line).forEach { match ->
                     val start = globalStart + match.range.first
                     val end = globalStart + match.range.last + 1
-                    builder.setSpanStyle(SpanStyle(color = italicColor, fontStyle = FontStyle.Italic), start, end)
+                    builder.addStyle(SpanStyle(color = italicColor, fontStyle = FontStyle.Italic), start, end)
                 }
                 linkRegex.findAll(line).forEach { match ->
                     buildLinkStyle(builder, globalStart, match)
@@ -87,26 +87,26 @@ class MarkdownSyntaxHighlighter(
             trimmed.startsWith("##") -> setHeading(builder, indent, 2, lineStart, lineEnd)
             trimmed.startsWith("# ") || trimmed.startsWith("#\t") -> setHeading(builder, indent, 1, lineStart, lineEnd)
             trimmed.startsWith(">") -> {
-                builder.setSpanStyle(SpanStyle(color = quoteColor, fontStyle = FontStyle.Italic), lineStart + indent, lineStart + indent + 1)
-                builder.setSpanStyle(SpanStyle(color = quoteColor), lineStart + indent + 1, lineEnd)
+                builder.addStyle(SpanStyle(color = quoteColor, fontStyle = FontStyle.Italic), lineStart + indent, lineStart + indent + 1)
+                builder.addStyle(SpanStyle(color = quoteColor), lineStart + indent + 1, lineEnd)
             }
             trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("+ ") -> {
-                builder.setSpanStyle(SpanStyle(color = listColor, fontWeight = FontWeight.Bold), lineStart + indent, lineStart + indent + 1)
+                builder.addStyle(SpanStyle(color = listColor, fontWeight = FontWeight.Bold), lineStart + indent, lineStart + indent + 1)
             }
             trimmed.matches(orderedListRegex) -> {
                 val dotIndex = trimmed.indexOf('.')
-                builder.setSpanStyle(SpanStyle(color = listColor, fontWeight = FontWeight.Bold), lineStart + indent, lineStart + indent + dotIndex + 1)
+                builder.addStyle(SpanStyle(color = listColor, fontWeight = FontWeight.Bold), lineStart + indent, lineStart + indent + dotIndex + 1)
             }
             hrRegex.matches(trimmed) -> {
-                builder.setSpanStyle(SpanStyle(color = hrColor), lineStart, lineEnd)
+                builder.addStyle(SpanStyle(color = hrColor), lineStart, lineEnd)
             }
         }
     }
 
     private fun setHeading(builder: AnnotatedString.Builder, indent: Int, level: Int, lineStart: Int, lineEnd: Int) {
         val hashEnd = lineStart + indent + level
-        builder.setSpanStyle(SpanStyle(color = headingColor, fontWeight = FontWeight.Bold), lineStart, hashEnd.coerceAtMost(lineEnd))
-        builder.setSpanStyle(SpanStyle(color = headingColor, fontWeight = if (level <= 3) FontWeight.Bold else FontWeight.SemiBold), lineStart + indent, lineEnd)
+        builder.addStyle(SpanStyle(color = headingColor, fontWeight = FontWeight.Bold), lineStart, hashEnd.coerceAtMost(lineEnd))
+        builder.addStyle(SpanStyle(color = headingColor, fontWeight = if (level <= 3) FontWeight.Bold else FontWeight.SemiBold), lineStart + indent, lineEnd)
     }
 
     private fun buildBoldStyle(builder: AnnotatedString.Builder, offset: Int, range: IntRange, delimiterLen: Int) {
@@ -114,9 +114,9 @@ class MarkdownSyntaxHighlighter(
         val end = offset + range.last + 1
         val contentStart = start + delimiterLen
         val contentEnd = end - delimiterLen
-        builder.setSpanStyle(SpanStyle(color = boldColor), start, contentStart)
-        builder.setSpanStyle(SpanStyle(color = boldColor, fontWeight = FontWeight.Bold), contentStart, contentEnd)
-        builder.setSpanStyle(SpanStyle(color = boldColor), contentEnd, end)
+        builder.addStyle(SpanStyle(color = boldColor), start, contentStart)
+        builder.addStyle(SpanStyle(color = boldColor, fontWeight = FontWeight.Bold), contentStart, contentEnd)
+        builder.addStyle(SpanStyle(color = boldColor), contentEnd, end)
     }
 
     private fun buildLinkStyle(builder: AnnotatedString.Builder, offset: Int, match: MatchResult) {
@@ -127,11 +127,11 @@ class MarkdownSyntaxHighlighter(
         val urlStart = offset + match.groups[2]!!.range.first
         val urlEnd = offset + match.groups[2]!!.range.last + 1
 
-        builder.setSpanStyle(SpanStyle(color = linkColor), fullStart, textStart)
-        builder.setSpanStyle(SpanStyle(color = linkColor, fontWeight = FontWeight.Medium), textStart, textEnd)
-        builder.setSpanStyle(SpanStyle(color = linkColor), textEnd, urlStart)
-        builder.setSpanStyle(SpanStyle(color = linkColor, fontStyle = FontStyle.Italic), urlStart, urlEnd)
-        builder.setSpanStyle(SpanStyle(color = linkColor), urlEnd, fullEnd)
+        builder.addStyle(SpanStyle(color = linkColor), fullStart, textStart)
+        builder.addStyle(SpanStyle(color = linkColor, fontWeight = FontWeight.Medium), textStart, textEnd)
+        builder.addStyle(SpanStyle(color = linkColor), textEnd, urlStart)
+        builder.addStyle(SpanStyle(color = linkColor, fontStyle = FontStyle.Italic), urlStart, urlEnd)
+        builder.addStyle(SpanStyle(color = linkColor), urlEnd, fullEnd)
     }
 
     companion object {
