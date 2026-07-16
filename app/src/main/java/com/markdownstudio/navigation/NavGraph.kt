@@ -37,15 +37,8 @@ fun NavGraph(
                 navArgument("fileUri") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val raw = backStackEntry.arguments?.getString("fileUri") ?: return@composable
-            val fileUri = try {
-                Screen.Editor.decodeFileUri(raw)
-            } catch (e: Exception) {
-                raw
-            }
-            if (fileUri.isBlank() || !fileUri.startsWith("content://")) {
-                return@composable
-            }
+            val fileUri = backStackEntry.arguments?.getString("fileUri") ?: return@composable
+            if (fileUri.isBlank()) return@composable
             EditorScreen(
                 fileUri = fileUri,
                 onNavigateBack = { navController.popBackStack() }

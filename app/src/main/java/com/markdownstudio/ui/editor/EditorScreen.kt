@@ -59,6 +59,7 @@ import com.markdownstudio.di.RenderEntryPoint
 import com.markdownstudio.ui.backlinks.BacklinksPanel
 import com.markdownstudio.ui.render.PreviewPanel
 import dagger.hilt.android.EntryPointAccessors
+import android.content.Intent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +80,13 @@ fun EditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val isDark = MaterialTheme.colorScheme.background.let { color ->
         (0.299f * color.red + 0.587f * color.green + 0.114f * color.blue) < 0.5f
+    }
+
+    val onLinkClicked: (String) -> Unit = { url ->
+        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
     }
 
     val fontFamily = when (state.fontFamily) {
@@ -204,8 +212,8 @@ fun EditorScreen(
                 ) { mode ->
                     when (mode) {
                         ViewMode.EDITOR -> editorView(state, isDark, fontFamily, viewModel)
-                        ViewMode.PREVIEW -> previewView(state, renderEngine, viewModel)
-                        ViewMode.SPLIT -> splitView(state, isDark, fontFamily, renderEngine, viewModel)
+                        ViewMode.PREVIEW -> previewView(state, renderEngine, viewModel, onLinkClicked)
+                        ViewMode.SPLIT -> splitView(state, isDark, fontFamily, renderEngine, viewModel, onLinkClicked)
                     }
                 }
 
@@ -337,14 +345,16 @@ private fun editorView(
 private fun previewView(
     state: EditorUiState,
     engine: MarkdownRenderEngineImpl,
-    viewModel: EditorViewModel
+    viewModel: EditorViewModel,
+    onLinkClicked: (String) -> Unit
 ) {
     PreviewPanel(
         markdown = state.content, renderEpoch = state.renderEpoch, engine = engine,
         scrollRatio = state.previewScrollRatio,
         isExternalScroll = state.isScrollingProgrammatically,
         onScrollChanged = viewModel::onPreviewScroll,
-        onScrollSyncComplete = viewModel::onScrollSyncComplete
+        onScrollSyncComplete = viewModel::onScrollSyncComplete,
+        onLinkClicked = onLinkClicked
     )
 }
 
@@ -354,7 +364,8 @@ private fun splitView(
     isDark: Boolean,
     fontFamily: FontFamily,
     engine: MarkdownRenderEngineImpl,
-    viewModel: EditorViewModel
+    viewModel: EditorViewModel,
+    onLinkClicked: (String) -> Unit
 ) {
     var dividerRatio by remember { mutableFloatStateOf(0.5f) }
     val density = LocalDensity.current
@@ -397,7 +408,8 @@ private fun splitView(
                 scrollRatio = state.previewScrollRatio,
                 isExternalScroll = state.isScrollingProgrammatically,
                 onScrollChanged = viewModel::onPreviewScroll,
-                onScrollSyncComplete = viewModel::onScrollSyncComplete
+                onScrollSyncComplete = viewModel::onScrollSyncComplete,
+                onLinkClicked = onLinkClicked
             )
         }
     }

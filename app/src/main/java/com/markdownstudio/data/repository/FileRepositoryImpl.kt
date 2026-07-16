@@ -3,6 +3,7 @@ package com.markdownstudio.data.repository
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import android.provider.DocumentsContract
 import com.markdownstudio.data.local.dao.FavoriteFileDao
 import com.markdownstudio.data.local.dao.RecentFileDao
 import com.markdownstudio.data.local.entity.FavoriteFileEntity
@@ -42,10 +43,12 @@ class FileRepositoryImpl @Inject constructor(
     override fun getFiles(directoryUri: String): Result<List<MarkdownFile>> {
         return try {
             val uri = Uri.parse(directoryUri)
-            val docFile = DocumentFile.fromTreeUri(context, uri)
-                ?: DocumentFile.fromSingleUri(context, uri)
+            val treeUri = if (DocumentsContract.isTreeUri(uri)) uri
+                else DocumentsContract.buildTreeDocumentUri(uri.authority, DocumentsContract.getDocumentId(uri))
+            val docFile = DocumentFile.fromTreeUri(context, treeUri)
+                ?: return Result.failure(Exception("Cannot access directory"))
 
-            val children = docFile?.listFiles()
+            val children = docFile.listFiles()
                 ?.filter { it.isFile && it.name?.endsWith(".md") == true || it.isDirectory }
                 ?.map { it.toMarkdownFile(directoryUri) }
                 ?: emptyList()
@@ -151,7 +154,12 @@ class FileRepositoryImpl @Inject constructor(
 
     override suspend fun readFile(file: MarkdownFile): Result<String> {
         return try {
-            val content = context.contentResolver.openInputStream(Uri.parse(file.uri))
+            val uri = Uri.parse(file.uri)
+            val docFile = DocumentFile.fromSingleUri(context, uri)
+            if (docFile != null && docFile.isDirectory) {
+                return Result.failure(Exception("Cannot read directory as file"))
+            }
+            val content = context.contentResolver.openInputStream(uri)
                 ?.bufferedReader()?.use { it.readText() }
                 ?: return Result.failure(Exception("Cannot open file"))
 
