@@ -214,8 +214,10 @@ class ExplorerViewModel @Inject constructor(
 
     fun loadTemplates() {
         val dirUri = _uiState.value.currentDirectoryUri ?: return
-        val templates = obsidianRepository.getTemplates(dirUri)
-        _uiState.value = _uiState.value.copy(availableTemplates = templates)
+        viewModelScope.launch {
+            val templates = obsidianRepository.getTemplates(dirUri)
+            _uiState.value = _uiState.value.copy(availableTemplates = templates)
+        }
     }
 
     fun createFromTemplate(template: Template, fileName: String, onCreated: (String) -> Unit) {

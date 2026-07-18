@@ -41,12 +41,12 @@ class FileRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getFiles(directoryUri: String): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             val uri = Uri.parse(directoryUri)
             val treeUri = if (DocumentsContract.isTreeUri(uri)) uri
                 else DocumentsContract.buildTreeDocumentUri(uri.authority, DocumentsContract.getDocumentId(uri))
             val docFile = DocumentFile.fromTreeUri(context, treeUri)
-                ?: return@runCatching Result.failure(Exception("Cannot access directory"))
+                ?: return@withContext Result.failure(Exception("Cannot access directory"))
 
             val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
             val children = docFile.listFiles()
@@ -55,7 +55,9 @@ class FileRepositoryImpl @Inject constructor(
                 ?: emptyList()
 
             Result.success(children)
-        }.getOrElse { Result.failure(it) }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun createFile(directoryUri: String, name: String): Result<MarkdownFile> {
@@ -151,8 +153,7 @@ class FileRepositoryImpl @Inject constructor(
                     context.contentResolver,
                     sourceUri,
                     srcParentUri,
-                    targetParentUri,
-                    DocumentsContract.getDocumentId(targetParentUri)
+                    targetParentUri
                 )
                 if (movedUri != null) {
                     val newDocFile = DocumentFile.fromSingleUri(context, movedUri)
@@ -211,16 +212,17 @@ class FileRepositoryImpl @Inject constructor(
     }
 
     override suspend fun searchFiles(query: String): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
-        runCatching {
-            val rootUri = prefs.getString(KEY_ROOT_URI, null)
-                ?: return@runCatching Result.success(emptyList())
+        try {
+            val rootUri = prefs.getString(KEY_ROOT_URI, null) ?: return@withContext Result.success(emptyList())
 
             val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
             val results = mutableListOf<MarkdownFile>()
             searchRecursive(Uri.parse(rootUri), query.lowercase(), results, favoriteUris)
 
             Result.success(results)
-        }.getOrElse { Result.failure(it) }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     private fun searchRecursive(
@@ -246,7 +248,7 @@ class FileRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getRecentFiles(): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             val entities = recentFileDao.getRecentFiles()
             val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
             Result.success(entities.map { entity ->
@@ -260,7 +262,9 @@ class FileRepositoryImpl @Inject constructor(
                     isFavorite = entity.uri in favoriteUris
                 )
             })
-        }.getOrElse { Result.failure(it) }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun addRecentFile(file: MarkdownFile) {
@@ -274,7 +278,7 @@ class FileRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getFavoriteFiles(): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             val entities = favoriteFileDao.getFavoriteFiles()
             Result.success(entities.map { entity ->
                 MarkdownFile(
@@ -287,7 +291,9 @@ class FileRepositoryImpl @Inject constructor(
                     isFavorite = true
                 )
             })
-        }.getOrElse { Result.failure(it) }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun toggleFavorite(file: MarkdownFile) {
