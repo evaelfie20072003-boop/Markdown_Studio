@@ -165,7 +165,7 @@ class GlobalSearchRepositoryImpl @Inject constructor(
                         )
                     }
                     searchFileNamesRecursive(file.uri, regex, results)
-                } else if (file.isFile && file.name?.endsWith(".md") == true) {
+                } else if (file.isFile && (file.name?.endsWith(".md") == true || file.name?.endsWith(".txt") == true)) {
                     if (file.name != null && regex.containsMatchIn(file.name!!)) {
                         results.add(
                             SearchResult(
@@ -236,7 +236,7 @@ class GlobalSearchRepositoryImpl @Inject constructor(
                 if (results.size >= MAX_RESULTS) break
                 if (file.isDirectory) {
                     searchContentRecursive(file.uri, regex, results)
-                } else if (file.isFile && file.name?.endsWith(".md") == true) {
+                } else if (file.isFile && (file.name?.endsWith(".md") == true || file.name?.endsWith(".txt") == true)) {
                     try {
                         val content = context.contentResolver.openInputStream(file.uri)
                             ?.bufferedReader()?.use { it.readText() } ?: continue

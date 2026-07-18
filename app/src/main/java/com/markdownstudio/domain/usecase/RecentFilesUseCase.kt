@@ -7,7 +7,7 @@ import javax.inject.Inject
 class RecentFilesUseCase @Inject constructor(
     private val repository: FileRepository
 ) {
-    fun getRecentFiles(): Result<List<MarkdownFile>> {
+    suspend fun getRecentFiles(): Result<List<MarkdownFile>> {
         return repository.getRecentFiles()
     }
 

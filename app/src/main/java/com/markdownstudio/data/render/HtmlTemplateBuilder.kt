@@ -259,7 +259,7 @@ object HtmlTemplateBuilder {
     mermaid.initialize({
         startOnLoad: false,
         theme: 'dark',
-        securityLevel: 'loose'
+        securityLevel: 'strict'
     });
 
     const md = window.markdownit({

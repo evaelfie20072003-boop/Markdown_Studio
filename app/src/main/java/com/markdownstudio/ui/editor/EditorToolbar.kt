@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.HorizontalRule
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.WrapText
@@ -39,6 +40,7 @@ fun EditorToolbar(
     onRedo: () -> Unit,
     onToggleWordWrap: () -> Unit,
     onShowFindReplace: () -> Unit,
+    onSave: () -> Unit = {},
     onInsertHeading: () -> Unit,
     onInsertBold: () -> Unit,
     onInsertItalic: () -> Unit,
@@ -98,6 +100,15 @@ fun EditorToolbar(
             )
         ) {
             Icon(Icons.Filled.WrapText, contentDescription = "Word wrap")
+        }
+
+        FilledTonalIconButton(
+            onClick = onSave,
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Icon(Icons.Filled.Save, contentDescription = "Save")
         }
 
         // Formatting

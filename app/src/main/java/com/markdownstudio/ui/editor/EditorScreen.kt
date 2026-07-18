@@ -60,6 +60,7 @@ import com.markdownstudio.ui.backlinks.BacklinksPanel
 import com.markdownstudio.ui.render.PreviewPanel
 import dagger.hilt.android.EntryPointAccessors
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,6 +105,11 @@ fun EditorScreen(
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
         }
+    }
+
+    BackHandler(enabled = state.isModified) {
+        viewModel.forceSave()
+        onNavigateBack()
     }
 
     Scaffold(
@@ -159,6 +165,7 @@ fun EditorScreen(
                 EditorToolbar(
                     canUndo = state.canUndo, canRedo = state.canRedo,
                     wordWrap = state.wordWrap,
+                    onSave = viewModel::forceSave,
                     onUndo = viewModel::undo, onRedo = viewModel::redo,
                     onToggleWordWrap = viewModel::toggleWordWrap,
                     onShowFindReplace = viewModel::toggleFindReplace,
@@ -238,6 +245,7 @@ fun EditorScreen(
                 EditorToolbar(
                     canUndo = state.canUndo, canRedo = state.canRedo,
                     wordWrap = state.wordWrap,
+                    onSave = viewModel::forceSave,
                     onUndo = viewModel::undo, onRedo = viewModel::redo,
                     onToggleWordWrap = viewModel::toggleWordWrap,
                     onShowFindReplace = viewModel::toggleFindReplace,

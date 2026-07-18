@@ -166,9 +166,11 @@ class EditorViewModel @Inject constructor(
     }
 
     fun navigateToWikiLink(target: String) {
-        val resolvedUri = obsidianRepository.resolveWikiLink(target)
-        if (resolvedUri != null) {
-            loadFile(resolvedUri)
+        viewModelScope.launch {
+            val resolvedUri = obsidianRepository.resolveWikiLink(target)
+            if (resolvedUri != null) {
+                loadFile(resolvedUri)
+            }
         }
     }
 
@@ -310,6 +312,19 @@ class EditorViewModel @Inject constructor(
         val c = _uiState.value.content; val p = _uiState.value.cursorPosition
         onContentChanged(c.substring(0, p) + "\n" + prefix + c.substring(p))
         onCursorChanged(p + 1 + prefix.length, null, null)
+    }
+
+    fun forceSave() {
+        viewModelScope.launch {
+            performSave()
+        }
+    }
+
+    override fun onCleared() {
+        kotlinx.coroutines.runBlocking {
+            performSave()
+        }
+        super.onCleared()
     }
 
     fun clearError() {

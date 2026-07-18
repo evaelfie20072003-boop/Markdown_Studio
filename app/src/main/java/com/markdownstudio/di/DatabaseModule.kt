@@ -28,7 +28,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "markdown_studio.db"
-        ).fallbackToDestructiveMigration()
+        ).addMigrations(AppDatabase.MIGRATION_1_2)
             .build()
     }
 

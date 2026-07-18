@@ -150,7 +150,7 @@ fun RenameDialog(
     onDismiss: () -> Unit,
     onRename: (String) -> Unit
 ) {
-    var newName by remember { mutableStateOf(currentName.removeSuffix(".md")) }
+    var newName by remember { mutableStateOf(currentName.removeSuffix(".md").removeSuffix(".txt")) }
     var showError by remember { mutableStateOf(false) }
 
     AlertDialog(

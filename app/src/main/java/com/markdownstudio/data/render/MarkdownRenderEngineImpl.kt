@@ -14,22 +14,6 @@ class MarkdownRenderEngineImpl @Inject constructor(
         HtmlTemplateBuilder.build(context)
     }
 
-    override fun renderToHtml(markdown: String): String {
-        val escaped = markdown
-            .replace("\\", "\\\\")
-            .replace("'", "\\'")
-            .replace("\n", "\\n")
-            .replace("\r", "")
-        return htmlTemplate.replace(
-            "document.getElementById('content').innerHTML = '';",
-            "render('$escaped');"
-        )
-    }
-
-    override suspend fun renderToHtmlAsync(markdown: String): String {
-        return renderToHtml(markdown)
-    }
-
     fun buildRenderScript(markdown: String): String {
         val escaped = markdown
             .replace("\\", "\\\\")

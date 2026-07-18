@@ -7,7 +7,7 @@ import javax.inject.Inject
 class GetFilesUseCase @Inject constructor(
     private val repository: FileRepository
 ) {
-    fun execute(directoryUri: String): Result<List<MarkdownFile>> {
+    suspend fun execute(directoryUri: String): Result<List<MarkdownFile>> {
         return repository.getFiles(directoryUri)
     }
 }

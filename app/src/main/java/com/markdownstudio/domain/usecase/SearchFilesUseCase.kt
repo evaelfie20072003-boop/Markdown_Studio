@@ -7,7 +7,7 @@ import javax.inject.Inject
 class SearchFilesUseCase @Inject constructor(
     private val repository: FileRepository
 ) {
-    fun execute(query: String): Result<List<MarkdownFile>> {
+    suspend fun execute(query: String): Result<List<MarkdownFile>> {
         return repository.searchFiles(query)
     }
 }

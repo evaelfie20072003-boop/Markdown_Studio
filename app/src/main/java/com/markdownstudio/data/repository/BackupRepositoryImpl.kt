@@ -200,7 +200,7 @@ class BackupRepositoryImpl @Inject constructor(
             ZipInputStream(zipBytes.inputStream()).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
-                    if (!entry.isDirectory && entry.name.endsWith(".md")) {
+                    if (!entry.isDirectory && (entry.name.endsWith(".md") || entry.name.endsWith(".txt"))) {
                         entries.add(entry.name to zis.readBytes())
                     }
                     entry = zis.nextEntry
@@ -243,7 +243,7 @@ class BackupRepositoryImpl @Inject constructor(
         for (child in children) {
             if (child.isDirectory) {
                 results.addAll(collectMarkdownFiles(child))
-            } else if (child.isFile && child.name?.endsWith(".md") == true) {
+            } else if (child.isFile && (child.name?.endsWith(".md") == true || child.name?.endsWith(".txt") == true)) {
                 results.add(child)
             }
         }
@@ -290,8 +290,10 @@ class BackupRepositoryImpl @Inject constructor(
         }
 
         val fileName = parts.last()
-        val baseName = fileName.removeSuffix(".md")
+        val isTxt = fileName.endsWith(".txt")
+        val baseName = if (isTxt) fileName.removeSuffix(".txt") else fileName.removeSuffix(".md")
+        val mime = if (isTxt) "text/plain" else "text/markdown"
         return current.findFile(fileName)
-            ?: current.createFile("text/markdown", baseName)
+            ?: current.createFile(mime, baseName)
     }
 }

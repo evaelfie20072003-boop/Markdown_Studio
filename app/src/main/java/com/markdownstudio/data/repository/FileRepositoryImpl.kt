@@ -12,7 +12,7 @@ import com.markdownstudio.domain.model.MarkdownFile
 import com.markdownstudio.domain.repository.FileRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,26 +40,22 @@ class FileRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getFiles(directoryUri: String): Result<List<MarkdownFile>> {
-        return try {
+    override suspend fun getFiles(directoryUri: String): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
+        runCatching {
             val uri = Uri.parse(directoryUri)
             val treeUri = if (DocumentsContract.isTreeUri(uri)) uri
                 else DocumentsContract.buildTreeDocumentUri(uri.authority, DocumentsContract.getDocumentId(uri))
             val docFile = DocumentFile.fromTreeUri(context, treeUri)
-                ?: return Result.failure(Exception("Cannot access directory"))
+                ?: return@runCatching Result.failure(Exception("Cannot access directory"))
 
+            val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
             val children = docFile.listFiles()
-                ?.filter { it.isFile && it.name?.endsWith(".md") == true || it.isDirectory }
-                ?.map { it.toMarkdownFile(directoryUri) }
+                ?.filter { it.isFile && isTextFile(it.name) || it.isDirectory }
+                ?.map { it.toMarkdownFile(directoryUri, favoriteUris) }
                 ?: emptyList()
 
-            val favoriteUris = runBlocking(Dispatchers.IO) {
-                favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
-            }
-            Result.success(children.map { it.copy(isFavorite = it.uri in favoriteUris) })
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+            Result.success(children)
+        }.getOrElse { Result.failure(it) }
     }
 
     override suspend fun createFile(directoryUri: String, name: String): Result<MarkdownFile> {
@@ -67,8 +63,10 @@ class FileRepositoryImpl @Inject constructor(
             val dirDoc = DocumentFile.fromTreeUri(context, Uri.parse(directoryUri))
                 ?: return Result.failure(Exception("Cannot access directory"))
 
-            val fileName = if (name.endsWith(".md")) name else "$name.md"
-            val file = dirDoc.createFile("text/markdown", fileName.removeSuffix(".md"))
+            val mimeType = mimeForFileName(name)
+            val baseName = name.removeSuffix(".md").removeSuffix(".txt")
+            val fileName = if (name.endsWith(".md") || name.endsWith(".txt")) name else "$name.md"
+            val file = dirDoc.createFile(mimeType, fileName.substringBeforeLast("."))
                 ?: return Result.failure(Exception("Failed to create file"))
 
             Result.success(file.toMarkdownFile(directoryUri))
@@ -82,8 +80,7 @@ class FileRepositoryImpl @Inject constructor(
             val docFile = DocumentFile.fromSingleUri(context, Uri.parse(file.uri))
                 ?: return Result.failure(Exception("File not found"))
 
-            val newFileName = if (newName.endsWith(".md")) newName else "$newName.md"
-            if (!docFile.renameTo(newFileName)) {
+            if (!docFile.renameTo(newName)) {
                 return Result.failure(Exception("Rename failed"))
             }
 
@@ -119,12 +116,13 @@ class FileRepositoryImpl @Inject constructor(
             val parentDoc = DocumentFile.fromTreeUri(context, Uri.parse(parentUri))
                 ?: return Result.failure(Exception("Cannot access parent"))
 
-            val baseName = file.name.removeSuffix(".md")
-            val newName = "${baseName} (copy).md"
+            val ext = if (file.name.endsWith(".txt")) ".txt" else ".md"
+            val baseName = file.name.removeSuffix(".md").removeSuffix(".txt")
+            val newName = "${baseName} (copy)$ext"
 
             val newFile = parentDoc.createFile(
-                "text/markdown",
-                newName.removeSuffix(".md")
+                mimeForFileName(newName),
+                newName.removeSuffix(ext)
             ) ?: return Result.failure(Exception("Failed to create copy"))
 
             context.contentResolver.openInputStream(Uri.parse(file.uri))?.use { input ->
@@ -143,13 +141,43 @@ class FileRepositoryImpl @Inject constructor(
         file: MarkdownFile,
         targetDirectoryUri: String
     ): Result<MarkdownFile> {
-        return duplicateFile(file).fold(
-            onSuccess = { copy ->
-                deleteFile(file)
-                Result.success(copy)
-            },
-            onFailure = { Result.failure(it) }
-        )
+        return try {
+            val sourceUri = Uri.parse(file.uri)
+            val srcParentUri = file.parentUri?.let { Uri.parse(it) }
+            val targetParentUri = Uri.parse(targetDirectoryUri)
+
+            if (srcParentUri != null && DocumentsContract.isDocumentUri(context, sourceUri)) {
+                val movedUri = DocumentsContract.moveDocument(
+                    context.contentResolver,
+                    sourceUri,
+                    srcParentUri,
+                    targetParentUri,
+                    DocumentsContract.getDocumentId(targetParentUri)
+                )
+                if (movedUri != null) {
+                    val newDocFile = DocumentFile.fromSingleUri(context, movedUri)
+                    return Result.success(
+                        MarkdownFile(
+                            uri = movedUri.toString(),
+                            name = file.name,
+                            size = newDocFile?.length() ?: 0L,
+                            lastModified = newDocFile?.lastModified() ?: 0L,
+                            isDirectory = false,
+                            parentUri = targetDirectoryUri
+                        )
+                    )
+                }
+            }
+            duplicateFile(file).fold(
+                onSuccess = { copy ->
+                    deleteFile(file)
+                    Result.success(copy)
+                },
+                onFailure = { Result.failure(it) }
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun readFile(file: MarkdownFile): Result<String> {
@@ -182,27 +210,24 @@ class FileRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun searchFiles(query: String): Result<List<MarkdownFile>> {
-        return try {
+    override suspend fun searchFiles(query: String): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
+        runCatching {
             val rootUri = prefs.getString(KEY_ROOT_URI, null)
-                ?: return Result.success(emptyList())
+                ?: return@runCatching Result.success(emptyList())
 
+            val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
             val results = mutableListOf<MarkdownFile>()
-            searchRecursive(Uri.parse(rootUri), query.lowercase(), results)
+            searchRecursive(Uri.parse(rootUri), query.lowercase(), results, favoriteUris)
 
-            val favoriteUris = runBlocking(Dispatchers.IO) {
-                favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
-            }
-            Result.success(results.map { it.copy(isFavorite = it.uri in favoriteUris) })
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+            Result.success(results)
+        }.getOrElse { Result.failure(it) }
     }
 
     private fun searchRecursive(
         dirUri: Uri,
         query: String,
-        results: MutableList<MarkdownFile>
+        results: MutableList<MarkdownFile>,
+        favoriteUris: Set<String>
     ) {
         if (results.size >= MAX_SEARCH_RESULTS) return
 
@@ -210,21 +235,21 @@ class FileRepositoryImpl @Inject constructor(
         for (file in dirDoc.listFiles()) {
             if (results.size >= MAX_SEARCH_RESULTS) break
             if (file.isDirectory) {
-                searchRecursive(file.uri, query, results)
+                searchRecursive(file.uri, query, results, favoriteUris)
             } else if (file.isFile &&
                 file.name?.lowercase()?.contains(query) == true &&
-                file.name?.endsWith(".md") == true
+                isTextFile(file.name)
             ) {
-                results.add(file.toMarkdownFile(dirUri.toString()))
+                results.add(file.toMarkdownFile(dirUri.toString(), favoriteUris))
             }
         }
     }
 
-    override fun getRecentFiles(): Result<List<MarkdownFile>> {
-        return try {
-            val entities = runBlocking(Dispatchers.IO) { recentFileDao.getRecentFiles() }
+    override suspend fun getRecentFiles(): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val entities = recentFileDao.getRecentFiles()
+            val favoriteUris = favoriteFileDao.getFavoriteFiles().map { it.uri }.toSet()
             Result.success(entities.map { entity ->
-                val isFav = runBlocking(Dispatchers.IO) { favoriteFileDao.isFavorite(entity.uri) }
                 MarkdownFile(
                     uri = entity.uri,
                     name = entity.name,
@@ -232,12 +257,10 @@ class FileRepositoryImpl @Inject constructor(
                     lastModified = entity.lastOpenedAt,
                     isDirectory = false,
                     parentUri = entity.parentUri,
-                    isFavorite = isFav
+                    isFavorite = entity.uri in favoriteUris
                 )
             })
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        }.getOrElse { Result.failure(it) }
     }
 
     override suspend fun addRecentFile(file: MarkdownFile) {
@@ -250,9 +273,9 @@ class FileRepositoryImpl @Inject constructor(
         )
     }
 
-    override fun getFavoriteFiles(): Result<List<MarkdownFile>> {
-        return try {
-            val entities = runBlocking(Dispatchers.IO) { favoriteFileDao.getFavoriteFiles() }
+    override suspend fun getFavoriteFiles(): Result<List<MarkdownFile>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val entities = favoriteFileDao.getFavoriteFiles()
             Result.success(entities.map { entity ->
                 MarkdownFile(
                     uri = entity.uri,
@@ -264,9 +287,7 @@ class FileRepositoryImpl @Inject constructor(
                     isFavorite = true
                 )
             })
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        }.getOrElse { Result.failure(it) }
     }
 
     override suspend fun toggleFavorite(file: MarkdownFile) {
@@ -283,13 +304,12 @@ class FileRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun isFavorite(uri: String): Boolean {
-        return runBlocking(Dispatchers.IO) { favoriteFileDao.isFavorite(uri) }
+    override suspend fun isFavorite(uri: String): Boolean = withContext(Dispatchers.IO) {
+        favoriteFileDao.isFavorite(uri)
     }
 
-    private fun DocumentFile.toMarkdownFile(parentUri: String): MarkdownFile {
+    private fun DocumentFile.toMarkdownFile(parentUri: String, favoriteUris: Set<String>): MarkdownFile {
         val uriStr = this.uri.toString()
-        val isFav = runBlocking(Dispatchers.IO) { favoriteFileDao.isFavorite(uriStr) }
         return MarkdownFile(
             uri = uriStr,
             name = this.name ?: "Unknown",
@@ -297,8 +317,29 @@ class FileRepositoryImpl @Inject constructor(
             lastModified = this.lastModified(),
             isDirectory = this.isDirectory,
             parentUri = parentUri,
-            isFavorite = isFav
+            isFavorite = uriStr in favoriteUris
         )
+    }
+
+    private suspend fun DocumentFile.toMarkdownFile(parentUri: String): MarkdownFile {
+        val uriStr = this.uri.toString()
+        return MarkdownFile(
+            uri = uriStr,
+            name = this.name ?: "Unknown",
+            size = this.length(),
+            lastModified = this.lastModified(),
+            isDirectory = this.isDirectory,
+            parentUri = parentUri,
+            isFavorite = favoriteFileDao.isFavorite(uriStr)
+        )
+    }
+
+    private fun isTextFile(name: String?): Boolean {
+        return name?.endsWith(".md") == true || name?.endsWith(".txt") == true
+    }
+
+    private fun mimeForFileName(name: String): String {
+        return if (name.endsWith(".txt")) "text/plain" else "text/markdown"
     }
 
     companion object {

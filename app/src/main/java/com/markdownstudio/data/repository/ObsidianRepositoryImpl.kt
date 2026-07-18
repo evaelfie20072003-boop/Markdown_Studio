@@ -23,7 +23,7 @@ import com.markdownstudio.domain.model.obsidian.WikiLink
 import com.markdownstudio.domain.repository.ObsidianRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,8 +68,8 @@ class ObsidianRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getOutgoingLinks(uri: String): List<WikiLink> {
-        return runBlocking(Dispatchers.IO) { wikiLinkDao.getOutgoingLinks(uri) }.map { entity ->
+    override suspend fun getOutgoingLinks(uri: String): List<WikiLink> = withContext(Dispatchers.IO) {
+        wikiLinkDao.getOutgoingLinks(uri).map { entity ->
             WikiLink(
                 target = entity.target,
                 displayText = entity.displayText,
@@ -78,13 +78,12 @@ class ObsidianRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getBacklinks(uri: String): List<Backlink> {
-        val name = uri.substringAfterLast("/").removeSuffix(".md").lowercase()
-        val entities = runBlocking(Dispatchers.IO) { wikiLinkDao.getBacklinks(name) }
-        return entities.map { entity ->
+    override suspend fun getBacklinks(uri: String): List<Backlink> = withContext(Dispatchers.IO) {
+        val name = uri.substringAfterLast("/").removeSuffix(".md").removeSuffix(".txt").lowercase()
+        wikiLinkDao.getBacklinks(name).map { entity ->
             Backlink(
                 sourceUri = entity.sourceUri,
-                sourceName = entity.sourceUri.substringAfterLast("/").removeSuffix(".md"),
+                sourceName = entity.sourceUri.substringAfterLast("/").removeSuffix(".md").removeSuffix(".txt"),
                 targetUri = uri,
                 targetName = name,
                 displayText = entity.displayText
@@ -92,14 +91,14 @@ class ObsidianRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getTags(uri: String): List<Tag> {
-        return runBlocking(Dispatchers.IO) { tagDao.getTagsForFile(uri) }.map { entity ->
+    override suspend fun getTags(uri: String): List<Tag> = withContext(Dispatchers.IO) {
+        tagDao.getTagsForFile(uri).map { entity ->
             Tag(name = entity.name, sourceUri = entity.sourceUri)
         }
     }
 
-    override fun getAllTags(): List<Tag> {
-        return runBlocking(Dispatchers.IO) { tagDao.getAllTags() }.map { entity ->
+    override suspend fun getAllTags(): List<Tag> = withContext(Dispatchers.IO) {
+        tagDao.getAllTags().map { entity ->
             Tag(name = entity.name, sourceUri = entity.sourceUri)
         }
     }
@@ -112,22 +111,23 @@ class ObsidianRepositoryImpl @Inject constructor(
         tagDao.deleteBySource(uri)
     }
 
-    override fun getLinkGraph(): LinkGraph {
-        val allLinks = runBlocking(Dispatchers.IO) { wikiLinkDao.getAllTargets() }
+    override suspend fun getLinkGraph(): LinkGraph = withContext(Dispatchers.IO) {
+        val allLinks = wikiLinkDao.getAllTargets()
         val nodes = mutableMapOf<String, LinkNode>()
         val edges = mutableListOf<LinkEdge>()
 
-        for (target in allLinks) {
-            val sources = runBlocking(Dispatchers.IO) { wikiLinkDao.getBacklinkSources(target) }
+        val backlinkSourcesMap = allLinks.associateWith { target ->
+            wikiLinkDao.getBacklinkSources(target)
+        }
+
+        for ((target, sources) in backlinkSourcesMap) {
             edges.addAll(sources.map { source ->
                 LinkEdge(source = source, target = target)
             })
             nodes.getOrPut(target) {
                 LinkNode(uri = "", name = target)
             }.let { node ->
-                nodes[target] = node.copy(
-                    backlinkUris = sources
-                )
+                nodes[target] = node.copy(backlinkUris = sources)
             }
             sources.forEach { source ->
                 nodes.getOrPut(source) {
@@ -139,12 +139,31 @@ class ObsidianRepositoryImpl @Inject constructor(
             }
         }
 
-        return LinkGraph(nodes = nodes, edges = edges)
+        LinkGraph(nodes = nodes, edges = edges)
     }
 
-    override suspend fun rebuildGraph() {
-        // Full rebuild - scans all files and re-parses
-        // This would be called after initial setup or on demand
+    override suspend fun rebuildGraph() = withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences("markdown_studio_prefs", Context.MODE_PRIVATE)
+        val rootUri = prefs.getString("root_directory_uri", null) ?: return@withContext
+        val rootDoc = DocumentFile.fromTreeUri(context, Uri.parse(rootUri)) ?: return@withContext
+        rebuildFromDirectory(rootDoc)
+    }
+
+    private suspend fun rebuildFromDirectory(directory: DocumentFile) {
+        val children = directory.listFiles() ?: return
+        for (child in children) {
+            if (child.isDirectory) {
+                rebuildFromDirectory(child)
+            } else if (child.isFile && (child.name?.endsWith(".md") == true || child.name?.endsWith(".txt") == true)) {
+                val uri = child.uri.toString()
+                val content = try {
+                    context.contentResolver.openInputStream(child.uri)
+                        ?.bufferedReader()?.use { it.readText() } ?: continue
+                } catch (_: Exception) { continue }
+                parseAndStoreLinks(uri, content)
+                parseAndStoreTags(uri, content)
+            }
+        }
     }
 
     override suspend fun createDailyNote(directoryUri: String): Result<DailyNote> {
@@ -188,7 +207,7 @@ class ObsidianRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getDailyNote(date: String, directoryUri: String): DailyNote? {
+    override suspend fun getDailyNote(date: String, directoryUri: String): DailyNote? {
         return try {
             val dirDoc = DocumentFile.fromTreeUri(context, Uri.parse(directoryUri)) ?: return null
             val fileName = "$date.md"
@@ -204,25 +223,23 @@ class ObsidianRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getTemplates(directoryUri: String): List<Template> {
+    override suspend fun getTemplates(directoryUri: String): List<Template> = withContext(Dispatchers.IO) {
         val templates = mutableListOf<Template>()
         try {
-            val dirDoc = DocumentFile.fromTreeUri(context, Uri.parse(directoryUri)) ?: return templates
+            val dirDoc = DocumentFile.fromTreeUri(context, Uri.parse(directoryUri)) ?: return@withContext templates
             val files = dirDoc.listFiles().filter {
-                it.isFile && it.name?.endsWith(".md") == true && it.name != null
+                it.isFile && (it.name?.endsWith(".md") == true || it.name?.endsWith(".txt") == true) && it.name != null
             }
             templates.addAll(files.map { file ->
                 Template(
                     uri = file.uri.toString(),
-                    name = file.name!!.removeSuffix(".md"),
+                    name = file.name!!.removeSuffix(".md").removeSuffix(".txt"),
                     isBuiltIn = false
                 )
             })
         } catch (_: Exception) {}
 
-        val savedTemplates = runBlocking(Dispatchers.IO) {
-            runCatching { templateDao.getAllTemplates() }.getOrDefault(emptyList())
-        }
+        val savedTemplates = runCatching { templateDao.getAllTemplates() }.getOrDefault(emptyList())
         templates.addAll(savedTemplates.filter { t ->
             templates.none { it.uri == t.uri }
         }.map { entity ->
@@ -234,7 +251,7 @@ class ObsidianRepositoryImpl @Inject constructor(
             )
         })
 
-        return templates
+        templates
     }
 
     override suspend fun createFromTemplate(
@@ -247,8 +264,10 @@ class ObsidianRepositoryImpl @Inject constructor(
             val dirDoc = DocumentFile.fromTreeUri(context, Uri.parse(targetDirectoryUri))
                 ?: return Result.failure(Exception("Cannot access directory"))
 
-            val fullName = if (fileName.endsWith(".md")) fileName else "$fileName.md"
-            val file = dirDoc.createFile("text/markdown", fullName.removeSuffix(".md"))
+            val ext = if (fileName.endsWith(".txt")) ".txt" else ".md"
+            val fullName = if (fileName.endsWith(".md") || fileName.endsWith(".txt")) fileName else "$fileName.md"
+            val mime = if (ext == ".txt") "text/plain" else "text/markdown"
+            val file = dirDoc.createFile(mime, fullName.removeSuffix(ext))
                 ?: return Result.failure(Exception("Failed to create file"))
 
             val content = if (template.content.isNotEmpty()) {
@@ -290,12 +309,12 @@ class ObsidianRepositoryImpl @Inject constructor(
         )
     }
 
-    override fun searchByTag(tag: String): List<String> {
-        return runBlocking(Dispatchers.IO) { tagDao.getFilesByTag(tag.trim().lowercase()) }
+    override suspend fun searchByTag(tag: String): List<String> = withContext(Dispatchers.IO) {
+        tagDao.getFilesByTag(tag.trim().lowercase())
     }
 
-    override fun resolveWikiLink(target: String): String? {
-        val normalized = target.trim().lowercase().removeSuffix(".md")
+    override suspend fun resolveWikiLink(target: String): String? {
+        val normalized = target.trim().lowercase().removeSuffix(".md").removeSuffix(".txt")
         val prefs = context.getSharedPreferences("markdown_studio_prefs", Context.MODE_PRIVATE)
         val rootUri = prefs.getString("root_directory_uri", null) ?: return null
 
@@ -313,7 +332,7 @@ class ObsidianRepositoryImpl @Inject constructor(
             if (file.isDirectory) {
                 resolveInDirectory(file, targetName)?.let { return it }
             } else if (file.isFile) {
-                val name = file.name?.removeSuffix(".md")?.lowercase() ?: continue
+                val name = file.name?.removeSuffix(".md")?.removeSuffix(".txt")?.lowercase() ?: continue
                 if (name == targetName) return file.uri.toString()
             }
         }

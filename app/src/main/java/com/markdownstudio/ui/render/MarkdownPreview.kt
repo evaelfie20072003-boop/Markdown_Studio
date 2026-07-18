@@ -80,14 +80,13 @@ fun MarkdownPreview(
                 WebView(context).apply {
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
-                    settings.allowFileAccess = true
-                    settings.allowContentAccess = true
+                    settings.allowFileAccess = false
+                    settings.allowContentAccess = false
                     settings.loadWithOverviewMode = true
                     settings.useWideViewPort = true
                     settings.builtInZoomControls = false
                     settings.displayZoomControls = false
                     settings.cacheMode = android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
-                    settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
 

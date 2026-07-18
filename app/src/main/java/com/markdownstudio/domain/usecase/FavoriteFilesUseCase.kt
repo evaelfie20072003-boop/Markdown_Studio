@@ -7,7 +7,7 @@ import javax.inject.Inject
 class FavoriteFilesUseCase @Inject constructor(
     private val repository: FileRepository
 ) {
-    fun getFavoriteFiles(): Result<List<MarkdownFile>> {
+    suspend fun getFavoriteFiles(): Result<List<MarkdownFile>> {
         return repository.getFavoriteFiles()
     }
 
@@ -15,7 +15,7 @@ class FavoriteFilesUseCase @Inject constructor(
         repository.toggleFavorite(file)
     }
 
-    fun isFavorite(uri: String): Boolean {
+    suspend fun isFavorite(uri: String): Boolean {
         return repository.isFavorite(uri)
     }
 }
